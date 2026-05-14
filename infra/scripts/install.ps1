@@ -12,6 +12,7 @@ param(
     [string]$CouncilSecretName = "darwin-workbench/council-service-credentials",
     [string]$DynamoTable = "darwin-workbench-prod",
     [string]$RepoUrl = "https://github.com/manuscornelius/darwin-workbench.git",
+    [string]$EpmRepoUrl = "https://github.com/manuscornelius/epm-connect.git",
     [string]$InstallDir = "C:\darwin"
 )
 
@@ -83,6 +84,18 @@ if (Test-Path $InstallDir) {
     git clone $RepoUrl $InstallDir
 }
 Write-OK "Repo ready at $InstallDir"
+
+# Clone epm-connect
+Write-Step "Cloning epm-connect"
+$epmRepoDir = "C:\darwin\epm-connect"
+if (Test-Path $epmRepoDir) {
+    Write-Host "    epm-connect already exists - pulling latest" -ForegroundColor Yellow
+    cd $epmRepoDir
+    git pull
+} else {
+    git clone $EpmRepoUrl $epmRepoDir
+}
+Write-OK "epm-connect ready at $epmRepoDir"
 
 # ---------------------------------------------------------------------------
 # Step 6 - Pull credentials from Secrets Manager
