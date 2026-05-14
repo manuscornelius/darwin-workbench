@@ -11,7 +11,7 @@ param(
     [string]$BpcSecretName = "darwin-workbench/bpc-credentials",
     [string]$CouncilSecretName = "darwin-workbench/council-service-credentials",
     [string]$DynamoTable = "darwin-workbench-prod",
-    [string]$RepoUrl = "https://github.com/your-org/darwin-workbench.git",
+    [string]$RepoUrl = "https://github.com/manuscornelius/darwin-workbench.git",
     [string]$InstallDir = "C:\darwin"
 )
 
