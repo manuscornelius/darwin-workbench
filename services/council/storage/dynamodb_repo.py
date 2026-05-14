@@ -33,8 +33,11 @@ from storage.models import (
     ToolCall,
 )
 
-_TABLE_NAME = os.getenv("DYNAMODB_TABLE", "darwin-workbench")
-_REGION = os.getenv("AWS_REGION", "us-east-1")
+def _get_table_name() -> str:
+    return os.getenv("DYNAMODB_TABLE", "darwin-workbench")
+
+def _get_region() -> str:
+    return os.getenv("AWS_REGION", "us-east-1")
 
 
 def _to_ddb(obj: Any) -> Any:
@@ -74,8 +77,8 @@ class DynamoDBBackend(StorageBackend):
         table_name: str | None = None,
         region: str | None = None,
     ) -> None:
-        self._table_name = table_name or _TABLE_NAME
-        self._region = region or _REGION
+        self._table_name = table_name or _get_table_name()
+        self._region = region or _get_region()
         self._table = None
 
     async def initialize(self) -> None:
