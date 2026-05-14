@@ -21,7 +21,7 @@ Start-Sleep -Seconds 3
 # Start council service
 Write-Step "Starting council service"
 Start-Process powershell.exe -ArgumentList `
-    "-NonInteractive -WindowStyle Minimized -Command `"cd '$InstallDir\services\council'; .\.venv\Scripts\Activate.ps1; python main.py`"" `
+    "-NonInteractive -WindowStyle Minimized -Command `"cd '$InstallDir\services\council'; .\.venv\Scripts\Activate.ps1; `$env:DYNAMODB_TABLE='darwin-workbench-prod'; `$env:STORAGE_PROVIDER='dynamodb'; `$env:LLM_PROVIDER='bedrock'; `$env:BEDROCK_MODEL_ID='us.anthropic.claude-sonnet-4-6'; `$env:AWS_REGION='us-east-1'; `$env:EPM_CONNECT_URL='http://127.0.0.1:8000/mcp'; `$env:EPM_CONNECT_AUTH_TOKEN='DarwinWorkbench2026!'; `$env:COUNCIL_PORT='8001'; python main.py`"" `
     -WindowStyle Minimized
 
 Start-Sleep -Seconds 3

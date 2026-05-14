@@ -232,7 +232,7 @@ Write-OK "epm-connect scheduled"
 # Council service
 $councilAction = New-ScheduledTaskAction `
     -Execute "powershell.exe" `
-    -Argument "-NonInteractive -WindowStyle Hidden -Command `"cd '$councilDir'; .\.venv\Scripts\Activate.ps1; python main.py`""
+    -Argument "-NonInteractive -WindowStyle Hidden -Command `"cd '$councilDir'; .\.venv\Scripts\Activate.ps1; `$env:DYNAMODB_TABLE='darwin-workbench-prod'; `$env:STORAGE_PROVIDER='dynamodb'; `$env:LLM_PROVIDER='bedrock'; `$env:BEDROCK_MODEL_ID='us.anthropic.claude-sonnet-4-6'; `$env:AWS_REGION='us-east-1'; `$env:EPM_CONNECT_URL='http://127.0.0.1:8000/mcp'; `$env:EPM_CONNECT_AUTH_TOKEN='DarwinWorkbench2026!'; `$env:COUNCIL_PORT='8001'; python main.py`""
 $trigger2 = New-ScheduledTaskTrigger -AtLogOn
 Register-ScheduledTask `
     -TaskName "Darwin-council" `
