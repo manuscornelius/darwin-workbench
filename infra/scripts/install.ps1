@@ -1,6 +1,6 @@
 <#
 .SYNOPSIS
-    Darwin AI Workbench — one-shot installation script.
+    Darwin AI Workbench - one-shot installation script.
     Run once on a fresh AWS Workspace after first login.
     Installs all dependencies, clones the repo, builds the UI,
     pulls credentials from Secrets Manager, and writes .env files.
@@ -26,7 +26,7 @@ function Write-OK($msg) {
 }
 
 # ---------------------------------------------------------------------------
-# Step 1 — Install Chocolatey (package manager)
+# Step 1 - Install Chocolatey (package manager)
 # ---------------------------------------------------------------------------
 Write-Step "Installing Chocolatey"
 if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
@@ -42,7 +42,7 @@ if (-not (Get-Command choco -ErrorAction SilentlyContinue)) {
 $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
 
 # ---------------------------------------------------------------------------
-# Step 2 — Install Python 3.12, Node.js, Git
+# Step 2 - Install Python 3.12, Node.js, Git
 # ---------------------------------------------------------------------------
 Write-Step "Installing Python 3.12, Node.js 20, Git"
 choco install python312 nodejs-lts git -y --no-progress
@@ -50,7 +50,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 Write-OK "Python, Node.js, Git installed"
 
 # ---------------------------------------------------------------------------
-# Step 3 — Install uv (Python package manager)
+# Step 3 - Install uv (Python package manager)
 # ---------------------------------------------------------------------------
 Write-Step "Installing uv"
 Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
@@ -58,7 +58,7 @@ $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";"
 Write-OK "uv installed"
 
 # ---------------------------------------------------------------------------
-# Step 4 — Install AWS CLI v2
+# Step 4 - Install AWS CLI v2
 # ---------------------------------------------------------------------------
 Write-Step "Installing AWS CLI v2"
 if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
@@ -72,11 +72,11 @@ if (-not (Get-Command aws -ErrorAction SilentlyContinue)) {
 }
 
 # ---------------------------------------------------------------------------
-# Step 5 — Clone the repo
+# Step 5 - Clone the repo
 # ---------------------------------------------------------------------------
 Write-Step "Cloning darwin-workbench repo to $InstallDir"
 if (Test-Path $InstallDir) {
-    Write-Host "    $InstallDir already exists — pulling latest" -ForegroundColor Yellow
+    Write-Host "    $InstallDir already exists - pulling latest" -ForegroundColor Yellow
     cd $InstallDir
     git pull
 } else {
@@ -85,7 +85,7 @@ if (Test-Path $InstallDir) {
 Write-OK "Repo ready at $InstallDir"
 
 # ---------------------------------------------------------------------------
-# Step 6 — Pull credentials from Secrets Manager
+# Step 6 - Pull credentials from Secrets Manager
 # ---------------------------------------------------------------------------
 Write-Step "Pulling credentials from Secrets Manager"
 
@@ -104,7 +104,7 @@ $councilSecret = aws secretsmanager get-secret-value `
 Write-OK "Credentials retrieved"
 
 # ---------------------------------------------------------------------------
-# Step 7 — Configure AWS CLI with council service credentials
+# Step 7 - Configure AWS CLI with council service credentials
 # ---------------------------------------------------------------------------
 Write-Step "Configuring AWS credentials for council service"
 aws configure set aws_access_key_id $councilSecret.aws_access_key_id
@@ -113,7 +113,7 @@ aws configure set region $Region
 Write-OK "AWS credentials configured"
 
 # ---------------------------------------------------------------------------
-# Step 8 — Install epm-connect
+# Step 8 - Install epm-connect
 # ---------------------------------------------------------------------------
 Write-Step "Installing epm-connect"
 $epmDir = "$InstallDir\epm-connect"
@@ -129,7 +129,7 @@ $epmEnv = "BPC_SERVER_URL=$($bpcSecret.server_url)`nBPC_USERNAME=$($bpcSecret.us
 Write-OK "epm-connect installed"
 
 # ---------------------------------------------------------------------------
-# Step 8b — Create council requirements.txt if missing
+# Step 8b - Create council requirements.txt if missing
 # (must run before the council install in Step 9)
 # ---------------------------------------------------------------------------
 $councilDir = "$InstallDir\services\council"
@@ -144,7 +144,7 @@ if (-not (Test-Path $reqFile)) {
 }
 
 # ---------------------------------------------------------------------------
-# Step 9 — Install council service
+# Step 9 - Install council service
 # ---------------------------------------------------------------------------
 Write-Step "Installing council service"
 cd $councilDir
@@ -159,7 +159,7 @@ $councilEnv = "ANTHROPIC_API_KEY=`nLLM_PROVIDER=bedrock`nBEDROCK_MODEL_ID=us.ant
 Write-OK "Council service installed"
 
 # ---------------------------------------------------------------------------
-# Step 10 — Build static UI
+# Step 10 - Build static UI
 # ---------------------------------------------------------------------------
 Write-Step "Building static UI"
 $uiDir = "$InstallDir\apps\workbench-ui"
@@ -169,7 +169,7 @@ npm run build
 Write-OK "Static UI built at $uiDir\dist"
 
 # ---------------------------------------------------------------------------
-# Step 11 — Install nginx to serve the static UI
+# Step 11 - Install nginx to serve the static UI
 # ---------------------------------------------------------------------------
 Write-Step "Installing nginx"
 choco install nginx -y --no-progress
@@ -196,7 +196,7 @@ http {
 Write-OK "nginx configured"
 
 # ---------------------------------------------------------------------------
-# Step 13 — Register Task Scheduler jobs for auto-start
+# Step 13 - Register Task Scheduler jobs for auto-start
 # ---------------------------------------------------------------------------
 Write-Step "Registering auto-start Task Scheduler jobs"
 
@@ -243,7 +243,7 @@ Register-ScheduledTask `
 Write-OK "nginx scheduled"
 
 # ---------------------------------------------------------------------------
-# Step 14 — Create desktop shortcut
+# Step 14 - Create desktop shortcut
 # ---------------------------------------------------------------------------
 Write-Step "Creating desktop shortcut"
 $shell = New-Object -ComObject WScript.Shell
