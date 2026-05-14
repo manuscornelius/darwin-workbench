@@ -205,7 +205,8 @@ http {
     }
 }
 "@
-[System.IO.File]::WriteAllText("C:\tools\nginx\conf\nginx.conf", $nginxConf, [System.Text.UTF8Encoding]::new($false))
+$nginxPath = (Get-ChildItem "C:\tools" -Directory | Where-Object { $_.Name -like "nginx*" } | Select-Object -First 1).FullName
+[System.IO.File]::WriteAllText("$nginxPath\conf\nginx.conf", $nginxConf, [System.Text.UTF8Encoding]::new($false))
 Write-OK "nginx configured"
 
 # ---------------------------------------------------------------------------
@@ -243,8 +244,9 @@ Register-ScheduledTask `
 Write-OK "Council service scheduled"
 
 # nginx (UI)
+$nginxExe = "$((Get-ChildItem 'C:\tools' -Directory | Where-Object { $_.Name -like 'nginx*' } | Select-Object -First 1).FullName)\nginx.exe"
 $nginxAction = New-ScheduledTaskAction `
-    -Execute "C:\tools\nginx\nginx.exe"
+    -Execute $nginxExe
 $trigger3 = New-ScheduledTaskTrigger -AtLogOn
 Register-ScheduledTask `
     -TaskName "Darwin-nginx" `

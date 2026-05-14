@@ -28,7 +28,8 @@ Start-Sleep -Seconds 3
 
 # Start nginx
 Write-Step "Starting nginx"
-Start-Process "C:\tools\nginx\nginx.exe" -WindowStyle Hidden
+$nginxPath = (Get-ChildItem "C:\tools" -Directory | Where-Object { $_.Name -like "nginx*" } | Select-Object -First 1).FullName
+Start-Process "$nginxPath\nginx.exe" -WindowStyle Hidden
 
 Start-Sleep -Seconds 2
 
