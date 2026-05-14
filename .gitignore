@@ -1,68 +1,30 @@
-﻿# Python
+# Python
 __pycache__/
-*.py[cod]
-*.so
-build/
-dist/
-*.egg-info/
-*.egg
-
-# Virtual environments
+*.pyc
+*.pyo
 .venv/
-venv/
-env/
+*.egg-info/
 
-# Testing & coverage
-.pytest_cache/
-.coverage
-.coverage.*
-htmlcov/
-coverage.xml
-.hypothesis/
+# Environment files
+.env
+.env.local
+.env.*.local
 
-# IDEs
-.vscode/*
-!.vscode/settings.json
-!.vscode/tasks.json
-!.vscode/launch.json
-!.vscode/extensions.json
-.idea/
-*.swp
+# Terraform
+infra/terraform/.terraform/
+infra/terraform/*.tfstate
+infra/terraform/*.tfstate.*
+infra/terraform/.terraform.lock.hcl
+infra/terraform/terraform.tfvars
+infra/terraform/crash.log
+
+# Node
+node_modules/
+dist/
+
+# Data
+services/council/data/
 
 # OS
 .DS_Store
 Thumbs.db
-desktop.ini
-
-# Environment / secrets
-.env
-.env.*
-!.env.example
-*.pem
-*.key
-secrets/
-
-# AWS / Infra
-.aws-sam/
-samconfig.toml
-cdk.out/
-.cdk.staging/
-*.tfstate
-*.tfstate.*
-.terraform/
-.terraform.lock.hcl
-
-# Node (for UI)
-node_modules/
-npm-debug.log*
-.next/
-.nuxt/
-
-# Logs
-logs/
-*.log
-
-# Runtime / temp
-tmp/
-temp/
-*.bak
