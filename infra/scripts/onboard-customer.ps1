@@ -5,7 +5,7 @@
     Run this once per new customer from the Omen.
 
 .PARAMETER CustomerName
-    Short slug for the customer — lowercase, no spaces (e.g. acme)
+    Short slug for the customer - lowercase, no spaces (e.g. acme)
 
 .PARAMETER CustomerFull
     Full display name of the customer (e.g. Acme Corporation)
@@ -23,7 +23,7 @@
     Customer BPC Environment (AppSet) name (e.g. Acme_Planning)
 
 .PARAMETER ContactEmail
-    Customer contact email — printed in the output summary for you to email
+    Customer contact email - printed in the output summary for you to email
 
 .PARAMETER Region
     AWS region (default: us-east-1)
@@ -188,7 +188,7 @@ while ($waitedSeconds -lt ($maxWaitMinutes * 60)) {
     }
 
     if ($wsState -eq "ERROR" -or $wsState -eq "TERMINATED") {
-        throw "Workspace entered state $wsState — check AWS console for details"
+        throw "Workspace entered state $wsState - check AWS console for details"
     }
 
     Start-Sleep -Seconds $intervalSeconds
