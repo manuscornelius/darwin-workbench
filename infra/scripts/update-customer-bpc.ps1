@@ -28,12 +28,16 @@ function Write-OK($msg)   { Write-Host "    OK: $msg" -ForegroundColor Green }
 # ---------------------------------------------------------------------------
 Write-Step "Loading customer record"
 
-$registryPath = "$PSScriptRoot\..\..\state\customers.json"
+$registryPath = "$PSScriptRoot\..\state\customers.json"
 if (-not (Test-Path $registryPath)) {
     throw "No customer registry found at $registryPath"
 }
 
-$registry = Get-Content $registryPath | ConvertFrom-Json -AsHashtable
+$registryRaw = Get-Content $registryPath | ConvertFrom-Json
+$registry = @{}
+foreach ($key in $registryRaw.PSObject.Properties.Name) {
+    $registry[$key] = $registryRaw.$key
+}
 if (-not $registry.ContainsKey($CustomerName)) {
     throw "Customer '$CustomerName' not found. Run onboard-customer.ps1 first."
 }

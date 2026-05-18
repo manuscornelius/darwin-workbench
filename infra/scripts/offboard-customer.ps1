@@ -25,12 +25,16 @@ function Write-Warn($msg) { Write-Host "    WARN: $msg" -ForegroundColor Yellow 
 # ---------------------------------------------------------------------------
 Write-Step "Loading customer record"
 
-$registryPath = "$PSScriptRoot\..\..\state\customers.json"
+$registryPath = "$PSScriptRoot\..\state\customers.json"
 if (-not (Test-Path $registryPath)) {
     throw "No customer registry found at $registryPath"
 }
 
-$registry = Get-Content $registryPath | ConvertFrom-Json -AsHashtable
+$registryRaw = Get-Content $registryPath | ConvertFrom-Json
+$registry = @{}
+foreach ($key in $registryRaw.PSObject.Properties.Name) {
+    $registry[$key] = $registryRaw.$key
+}
 if (-not $registry.ContainsKey($CustomerName)) {
     throw "Customer '$CustomerName' not found in registry."
 }
@@ -58,7 +62,7 @@ Write-Step "Destroying customer Workspace and Secrets Manager secret via Terrafo
 Push-Location $TerraformDir
 try {
     terraform init -reconfigure `
-        -backend-config="path=$PSScriptRoot\..\..\state\$CustomerName.tfstate" `
+        -backend-config="path=$PSScriptRoot\..\state\$CustomerName.tfstate" `
         | Out-Host
 
     terraform destroy `
@@ -90,9 +94,9 @@ $registry.Remove($CustomerName)
 )
 
 # Archive the state file rather than delete it
-$statePath = "$PSScriptRoot\..\..\state\$CustomerName.tfstate"
+$statePath = "$PSScriptRoot\..\state\$CustomerName.tfstate"
 if (Test-Path $statePath) {
-    $archivePath = "$PSScriptRoot\..\..\state\archived\$CustomerName-$(Get-Date -Format 'yyyyMMdd').tfstate"
+    $archivePath = "$PSScriptRoot\..\state\archived\$CustomerName-$(Get-Date -Format 'yyyyMMdd').tfstate"
     $archiveDir = Split-Path $archivePath
     if (-not (Test-Path $archiveDir)) {
         New-Item -ItemType Directory -Path $archiveDir -Force | Out-Null

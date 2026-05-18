@@ -154,7 +154,7 @@ aws_region      = "$Region"
 Push-Location $TerraformDir
 try {
     terraform init -reconfigure `
-        -backend-config="path=$PSScriptRoot\..\..\state\$CustomerName.tfstate" `
+        -backend-config="path=$PSScriptRoot\..\state\$CustomerName.tfstate" `
         | Out-Host
 
     terraform apply `
@@ -312,7 +312,7 @@ Write-OK "Registration code: $regCode"
 # ---------------------------------------------------------------------------
 Write-Step "Recording customer in local registry"
 
-$registryPath = "$PSScriptRoot\..\..\state\customers.json"
+$registryPath = "$PSScriptRoot\..\state\customers.json"
 $registryDir = Split-Path $registryPath
 
 if (-not (Test-Path $registryDir)) {
@@ -321,7 +321,11 @@ if (-not (Test-Path $registryDir)) {
 
 $registry = @{}
 if (Test-Path $registryPath) {
-    $registry = Get-Content $registryPath | ConvertFrom-Json -AsHashtable
+    $registryRaw = Get-Content $registryPath | ConvertFrom-Json
+$registry = @{}
+foreach ($key in $registryRaw.PSObject.Properties.Name) {
+    $registry[$key] = $registryRaw.$key
+}
 }
 
 $registry[$CustomerName] = @{
