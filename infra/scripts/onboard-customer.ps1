@@ -178,12 +178,43 @@ Write-Host "    This will take 20-30 minutes. Please wait..." -ForegroundColor Y
 
 $adUsername = "$CustomerName-user"
 
-$workspaceJson = "[{`"DirectoryId`":`"d-90660c1382`",`"UserName`":`"$adUsername`",`"BundleId`":`"wsb-gm4d5tx2v`",`"WorkspaceProperties`":{`"ComputeTypeName`":`"PERFORMANCE`",`"RunningMode`":`"AUTO_STOP`",`"RunningModeAutoStopTimeoutInMinutes`":60,`"RootVolumeSizeGib`":80,`"UserVolumeSizeGib`":50},`"Tags`":[{`"Key`":`"Customer`",`"Value`":`"$CustomerName`"},{`"Key`":`"Project`",`"Value`":`"darwin-workbench`"}]}]"
+# Build the create-workspaces request as a PowerShell object, serialize via
+# ConvertTo-Json, and pass to AWS CLI as file:// to avoid PowerShell 5.1's
+# native command argument quoting bug (it strips embedded double quotes).
+$workspaceRequest = @(
+    @{
+        DirectoryId = "d-90660c1382"
+        UserName    = $adUsername
+        BundleId    = "wsb-gm4d5tx2v"
+        WorkspaceProperties = @{
+            ComputeTypeName                     = "PERFORMANCE"
+            RunningMode                         = "AUTO_STOP"
+            RunningModeAutoStopTimeoutInMinutes = 60
+            RootVolumeSizeGib                   = 80
+            UserVolumeSizeGib                   = 50
+        }
+        Tags = @(
+            @{ Key = "Customer"; Value = $CustomerName }
+            @{ Key = "Project";  Value = "darwin-workbench" }
+        )
+    }
+)
 
-$createResult = aws workspaces create-workspaces `
-    --workspaces $workspaceJson `
-    --region $Region `
-    --output json | ConvertFrom-Json
+$workspaceJsonPath = Join-Path $env:TEMP "workspace-$CustomerName-$([guid]::NewGuid().ToString('N')).json"
+[System.IO.File]::WriteAllText(
+    $workspaceJsonPath,
+    ($workspaceRequest | ConvertTo-Json -Depth 10),
+    [System.Text.UTF8Encoding]::new($false)
+)
+
+try {
+    $createResult = aws workspaces create-workspaces `
+        --workspaces "file://$workspaceJsonPath" `
+        --region $Region `
+        --output json | ConvertFrom-Json
+} finally {
+    if (Test-Path $workspaceJsonPath) { Remove-Item $workspaceJsonPath -Force }
+}
 
 if ($createResult.FailedRequests -and $createResult.FailedRequests.Count -gt 0) {
     throw "Failed to create Workspace: $($createResult.FailedRequests[0].ErrorMessage)"
