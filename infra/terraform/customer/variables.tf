@@ -14,12 +14,6 @@ variable "customer_full" {
   type        = string
 }
 
-variable "directory_id" {
-  description = "Simple AD directory ID (from shared infrastructure)"
-  type        = string
-  default     = "d-90660c1382"
-}
-
 variable "bpc_server_url" {
   description = "Customer BPC server URL"
   type        = string
@@ -41,14 +35,3 @@ variable "bpc_environment" {
   type        = string
 }
 
-variable "dynamodb_table" {
-  description = "Shared DynamoDB table name"
-  type        = string
-  default     = "darwin-workbench-prod"
-}
-
-variable "council_secret_arn" {
-  description = "ARN of the council service AWS credentials secret"
-  type        = string
-  default     = ""
-}

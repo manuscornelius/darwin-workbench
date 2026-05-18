@@ -126,14 +126,11 @@ $WorkspacePassword = "${adj}${noun}${num}Dw"
 Write-OK "Password generated"
 
 # ---------------------------------------------------------------------------
-# Step 3 - Terraform apply to provision Workspace and Secrets Manager secret
+# Step 3 - Store BPC credentials in Secrets Manager via Terraform
 # ---------------------------------------------------------------------------
-Write-Step "Provisioning customer Workspace via Terraform"
-Write-Host "    This will take 20-30 minutes. Please wait..." -ForegroundColor Yellow
+Write-Step "Storing BPC credentials in Secrets Manager"
 
-# Write a tfvars file for this customer
 $tfvarsPath = "$TerraformDir\$CustomerName.tfvars"
-# Escape backslashes for HCL — single backslash becomes double backslash
 $HclUsername = $BpcUsername -replace '\\', '\\'
 $HclPassword = $BpcPassword -replace '\\', '\\'
 
@@ -148,10 +145,8 @@ aws_region      = "$Region"
 "@
 [System.IO.File]::WriteAllText($tfvarsPath, $tfvarsContent, [System.Text.UTF8Encoding]::new($false))
 
-# Initialise and apply
 Push-Location $TerraformDir
 try {
-    # Use a per-customer state file so customers never interfere with each other
     terraform init -reconfigure `
         -backend-config="path=$PSScriptRoot\..\..\state\$CustomerName.tfstate" `
         | Out-Host
@@ -161,27 +156,42 @@ try {
         -auto-approve `
         | Out-Host
 
-    # Capture outputs
     $tfOutputRaw = terraform output -json 2>$null
     if (-not $tfOutputRaw) {
         throw "Terraform apply failed - no outputs returned. Check the errors above."
     }
     $tfOutput = $tfOutputRaw | ConvertFrom-Json
-    $WorkspaceId = $tfOutput.workspace_id.value
-    $WorkspaceUsername = $tfOutput.workspace_username.value
     $BpcSecretArn = $tfOutput.bpc_secret_arn.value
-
-    if (-not $WorkspaceId) {
-        throw "Terraform apply completed but no Workspace ID in outputs. Check the AWS console."
-    }
 
 } finally {
     Pop-Location
-    # Remove the tfvars file so credentials don't sit on disk
     if (Test-Path $tfvarsPath) { Remove-Item $tfvarsPath -Force }
 }
 
-Write-OK "Workspace provisioned: $WorkspaceId"
+Write-OK "BPC credentials stored: $BpcSecretArn"
+
+# ---------------------------------------------------------------------------
+# Step 4 - Provision Workspace via AWS CLI
+# ---------------------------------------------------------------------------
+Write-Step "Provisioning customer Workspace"
+Write-Host "    This will take 20-30 minutes. Please wait..." -ForegroundColor Yellow
+
+$adUsername = "$CustomerName-user"
+
+$workspaceJson = "[{`"DirectoryId`":`"d-90660c1382`",`"UserName`":`"$adUsername`",`"BundleId`":`"wsb-gm4d5tx2v`",`"WorkspaceProperties`":{`"ComputeTypeName`":`"PERFORMANCE`",`"RunningMode`":`"AUTO_STOP`",`"RunningModeAutoStopTimeoutInMinutes`":60,`"RootVolumeSizeGib`":80,`"UserVolumeSizeGib`":50},`"Tags`":[{`"Key`":`"Customer`",`"Value`":`"$CustomerName`"},{`"Key`":`"Project`",`"Value`":`"darwin-workbench`"}]}]"
+
+$createResult = aws workspaces create-workspaces `
+    --workspaces $workspaceJson `
+    --region $Region `
+    --output json | ConvertFrom-Json
+
+if ($createResult.FailedRequests -and $createResult.FailedRequests.Count -gt 0) {
+    throw "Failed to create Workspace: $($createResult.FailedRequests[0].ErrorMessage)"
+}
+
+$WorkspaceId = $createResult.PendingRequests[0].WorkspaceId
+$WorkspaceUsername = $adUsername
+Write-OK "Workspace provisioning started: $WorkspaceId"
 
 # ---------------------------------------------------------------------------
 # Step 4 - Wait for Workspace to reach AVAILABLE state
