@@ -25,6 +25,9 @@ dist/
 # Data
 services/council/data/
 
+# Customer state files (contain Workspace IDs — no secrets but keep local)
+infra/state/
+
 # OS
 .DS_Store
 Thumbs.db
