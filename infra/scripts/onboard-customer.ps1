@@ -92,17 +92,23 @@ try {
     throw "AWS CLI not configured or credentials invalid. Run: aws configure"
 }
 
-# Check if customer already exists
+# Check if customer already exists.
+# describe-secret can still return a deleted secret for several minutes after
+# force-delete-without-recovery (eventual consistency). Parse the response and
+# only block if the secret exists AND is not scheduled for deletion.
 $existingSecret = $null
 try {
-    $existingSecret = aws secretsmanager describe-secret `
+    $existingSecretRaw = aws secretsmanager describe-secret `
         --secret-id "darwin-workbench/customers/$CustomerName/bpc" `
         --region $Region `
         --output json 2>$null
+    if ($existingSecretRaw) {
+        $existingSecret = $existingSecretRaw | ConvertFrom-Json
+    }
 } catch {
     $existingSecret = $null
 }
-if ($existingSecret) {
+if ($existingSecret -and -not $existingSecret.DeletedDate) {
     throw "Customer '$CustomerName' already exists in Secrets Manager. Use update-customer-bpc.ps1 to update their credentials."
 }
 
@@ -279,7 +285,8 @@ Write-OK "Workspace is AVAILABLE"
 # ---------------------------------------------------------------------------
 Write-Step "Setting Workspace password"
 
-aws workspaces reset-user-password `
+# Password reset is a Directory Service operation, not a Workspaces one
+aws ds reset-user-password `
     --directory-id "d-90660c1382" `
     --user-name $WorkspaceUsername `
     --new-password $WorkspacePassword `
