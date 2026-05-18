@@ -179,7 +179,7 @@ Write-Host "    This will take 20-30 minutes. Please wait..." -ForegroundColor Y
 $adUsername = "$CustomerName-user"
 
 # Build the create-workspaces request as a PowerShell object, serialize via
-# ConvertTo-Json, and pass to AWS CLI as file:// to avoid PowerShell 5.1's
+# ConvertTo-Json, and pass to AWS CLI as file:/// to avoid PowerShell 5.1's
 # native command argument quoting bug (it strips embedded double quotes).
 $workspaceRequest = @(
     @{
@@ -200,16 +200,29 @@ $workspaceRequest = @(
     }
 )
 
+# Use -InputObject so PS 5.1 doesn't unwrap the single-element array via the
+# pipeline, which would produce a bare JSON object instead of a JSON array.
+$workspaceJsonText = ConvertTo-Json -InputObject $workspaceRequest -Depth 10
+
 $workspaceJsonPath = Join-Path $env:TEMP "workspace-$CustomerName-$([guid]::NewGuid().ToString('N')).json"
 [System.IO.File]::WriteAllText(
     $workspaceJsonPath,
-    ($workspaceRequest | ConvertTo-Json -Depth 10),
+    $workspaceJsonText,
     [System.Text.UTF8Encoding]::new($false)
 )
 
+# Debug: show exactly what we're about to send to AWS CLI
+Write-Host "    Request file: $workspaceJsonPath" -ForegroundColor Gray
+Write-Host "    Request body:" -ForegroundColor Gray
+Get-Content $workspaceJsonPath | ForEach-Object { Write-Host "      $_" -ForegroundColor Gray }
+
+# Use file:/// with forward slashes — the form AWS CLI on Windows handles most
+# reliably (file://C:\... can confuse the URI parser into treating "C" as host).
+$workspaceJsonFileUri = "file:///" + ($workspaceJsonPath -replace '\\', '/')
+
 try {
     $createResult = aws workspaces create-workspaces `
-        --workspaces "file://$workspaceJsonPath" `
+        --workspaces $workspaceJsonFileUri `
         --region $Region `
         --output json | ConvertFrom-Json
 } finally {
