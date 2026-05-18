@@ -93,9 +93,15 @@ try {
 }
 
 # Check if customer already exists
-$existingSecret = aws secretsmanager describe-secret `
-    --secret-id "darwin-workbench/customers/$CustomerName/bpc" `
-    --region $Region 2>$null
+$existingSecret = $null
+try {
+    $existingSecret = aws secretsmanager describe-secret `
+        --secret-id "darwin-workbench/customers/$CustomerName/bpc" `
+        --region $Region `
+        --output json 2>$null
+} catch {
+    $existingSecret = $null
+}
 if ($existingSecret) {
     throw "Customer '$CustomerName' already exists in Secrets Manager. Use update-customer-bpc.ps1 to update their credentials."
 }
@@ -127,12 +133,16 @@ Write-Host "    This will take 20-30 minutes. Please wait..." -ForegroundColor Y
 
 # Write a tfvars file for this customer
 $tfvarsPath = "$TerraformDir\$CustomerName.tfvars"
+# Escape backslashes for HCL — single backslash becomes double backslash
+$HclUsername = $BpcUsername -replace '\\', '\\'
+$HclPassword = $BpcPassword -replace '\\', '\\'
+
 $tfvarsContent = @"
 customer_name   = "$CustomerName"
 customer_full   = "$CustomerFull"
 bpc_server_url  = "$BpcServerUrl"
-bpc_username    = "$BpcUsername"
-bpc_password    = "$BpcPassword"
+bpc_username    = "$HclUsername"
+bpc_password    = "$HclPassword"
 bpc_environment = "$BpcEnvironment"
 aws_region      = "$Region"
 "@
@@ -152,10 +162,18 @@ try {
         | Out-Host
 
     # Capture outputs
-    $tfOutput = terraform output -json | ConvertFrom-Json
+    $tfOutputRaw = terraform output -json 2>$null
+    if (-not $tfOutputRaw) {
+        throw "Terraform apply failed - no outputs returned. Check the errors above."
+    }
+    $tfOutput = $tfOutputRaw | ConvertFrom-Json
     $WorkspaceId = $tfOutput.workspace_id.value
     $WorkspaceUsername = $tfOutput.workspace_username.value
     $BpcSecretArn = $tfOutput.bpc_secret_arn.value
+
+    if (-not $WorkspaceId) {
+        throw "Terraform apply completed but no Workspace ID in outputs. Check the AWS console."
+    }
 
 } finally {
     Pop-Location
