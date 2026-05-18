@@ -44,10 +44,11 @@ $customer = $registry[$CustomerName]
 Write-Host ""
 Write-Host "  WARNING: This will permanently terminate the Workspace for:" -ForegroundColor Red
 Write-Host "  Customer:     $($customer.customer_full)" -ForegroundColor White
+Write-Host "  Slug:         $CustomerName" -ForegroundColor White
 Write-Host "  Workspace ID: $($customer.workspace_id)" -ForegroundColor White
 Write-Host "  All session data in DynamoDB will be preserved." -ForegroundColor Gray
 Write-Host ""
-$confirm = Read-Host "  Type the customer name to confirm offboarding"
+$confirm = Read-Host "  Type the slug '$CustomerName' to confirm offboarding"
 
 if ($confirm -ne $CustomerName) {
     Write-Host "Offboarding cancelled." -ForegroundColor Yellow
@@ -55,9 +56,64 @@ if ($confirm -ne $CustomerName) {
 }
 
 # ---------------------------------------------------------------------------
-# Step 2 - Terraform destroy the customer resources
+# Step 2 - Terminate the Workspace via AWS CLI
+# (Workspace was created via AWS CLI in onboard-customer.ps1, not via
+# Terraform, so it is not present in the tfstate file.)
 # ---------------------------------------------------------------------------
-Write-Step "Destroying customer Workspace and Secrets Manager secret via Terraform"
+Write-Step "Terminating customer Workspace via AWS CLI"
+
+# AWS CLI shorthand (WorkspaceId=ws-xxx) is unreliable on PS 5.1 / AWS CLI v2
+# on Windows — the shorthand parser sometimes treats the entire literal string
+# as the WorkspaceId value. Build the request as JSON and pass via file://.
+$terminateRequest = @(
+    @{ WorkspaceId = $customer.workspace_id }
+)
+$terminateJsonPath = Join-Path $env:TEMP "terminate-$CustomerName-$([guid]::NewGuid().ToString('N')).json"
+[System.IO.File]::WriteAllText(
+    $terminateJsonPath,
+    (ConvertTo-Json -InputObject $terminateRequest -Depth 5),
+    [System.Text.UTF8Encoding]::new($false)
+)
+$terminateJsonFileUri = "file://" + ($terminateJsonPath -replace '\\', '/')
+
+try {
+    aws workspaces terminate-workspaces `
+        --terminate-workspace-requests $terminateJsonFileUri `
+        --region $Region | Out-Null
+} finally {
+    if (Test-Path $terminateJsonPath) { Remove-Item $terminateJsonPath -Force }
+}
+
+# Poll until the Workspace reaches TERMINATED (or describe-workspaces stops
+# returning it). Termination usually takes 2-5 minutes.
+$maxWaitMinutes = 10
+$waitedSeconds = 0
+$intervalSeconds = 30
+$wsState = $null
+
+while ($waitedSeconds -lt ($maxWaitMinutes * 60)) {
+    $wsState = aws workspaces describe-workspaces `
+        --workspace-ids $customer.workspace_id `
+        --region $Region `
+        --query "Workspaces[0].State" `
+        --output text 2>$null
+
+    Write-Host "    [$([int]($waitedSeconds/60))m] Workspace state: $wsState" -ForegroundColor Gray
+
+    if (-not $wsState -or $wsState -eq "TERMINATED" -or $wsState -eq "None") {
+        break
+    }
+
+    Start-Sleep -Seconds $intervalSeconds
+    $waitedSeconds += $intervalSeconds
+}
+
+Write-OK "Workspace terminated: $($customer.workspace_id)"
+
+# ---------------------------------------------------------------------------
+# Step 3 - Destroy the Secrets Manager entries via Terraform
+# ---------------------------------------------------------------------------
+Write-Step "Destroying Secrets Manager entries via Terraform"
 
 Push-Location $TerraformDir
 try {
@@ -78,10 +134,10 @@ try {
     Pop-Location
 }
 
-Write-OK "Workspace and secrets destroyed"
+Write-OK "Secrets Manager entries destroyed"
 
 # ---------------------------------------------------------------------------
-# Step 3 - Remove from registry
+# Step 4 - Remove from registry
 # ---------------------------------------------------------------------------
 Write-Step "Removing from customer registry"
 
@@ -108,7 +164,7 @@ if (Test-Path $statePath) {
 Write-OK "Customer removed from registry"
 
 # ---------------------------------------------------------------------------
-# Step 4 - Summary
+# Step 5 - Summary
 # ---------------------------------------------------------------------------
 Write-Host ""
 Write-Host "============================================================" -ForegroundColor Green
