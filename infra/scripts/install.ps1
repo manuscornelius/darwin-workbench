@@ -8,7 +8,7 @@
 
 param(
     [string]$Region = "us-east-1",
-    [string]$BpcSecretName = "darwin-workbench/bpc-credentials",
+    [string]$BpcSecretName = "",
     [string]$CouncilSecretName = "darwin-workbench/council-service-credentials",
     [string]$DynamoTable = "darwin-workbench-prod",
     [string]$RepoUrl = "https://github.com/manuscornelius/darwin-workbench.git",
@@ -102,14 +102,16 @@ Write-OK "epm-connect ready at $epmRepoDir"
 # ---------------------------------------------------------------------------
 Write-Step "Pulling credentials from Secrets Manager"
 
-$bpcSecret = aws secretsmanager get-secret-value `
-    --secret-id $BpcSecretName `
+# Configure AWS credentials from the council service secret
+# These were set by the onboarding script and stored in Secrets Manager
+$councilSecret = aws secretsmanager get-secret-value `
+    --secret-id $CouncilSecretName `
     --region $Region `
     --query SecretString `
     --output text | ConvertFrom-Json
 
-$councilSecret = aws secretsmanager get-secret-value `
-    --secret-id $CouncilSecretName `
+$bpcSecret = aws secretsmanager get-secret-value `
+    --secret-id $BpcSecretName `
     --region $Region `
     --query SecretString `
     --output text | ConvertFrom-Json
