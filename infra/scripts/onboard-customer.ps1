@@ -216,9 +216,10 @@ Write-Host "    Request file: $workspaceJsonPath" -ForegroundColor Gray
 Write-Host "    Request body:" -ForegroundColor Gray
 Get-Content $workspaceJsonPath | ForEach-Object { Write-Host "      $_" -ForegroundColor Gray }
 
-# Use file:/// with forward slashes — the form AWS CLI on Windows handles most
-# reliably (file://C:\... can confuse the URI parser into treating "C" as host).
-$workspaceJsonFileUri = "file:///" + ($workspaceJsonPath -replace '\\', '/')
+# Use file:// (two slashes) with forward slashes. AWS CLI strips file:// and
+# opens the remainder as a path; three slashes leaves a leading / which makes
+# the path invalid on Windows.
+$workspaceJsonFileUri = "file://" + ($workspaceJsonPath -replace '\\', '/')
 
 try {
     $createResult = aws workspaces create-workspaces `
