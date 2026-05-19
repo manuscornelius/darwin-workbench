@@ -89,9 +89,11 @@ Write-OK "Secrets Manager updated"
 # ---------------------------------------------------------------------------
 Write-Step "Updating customer registry"
 
-$registry[$CustomerName].bpc_server_url  = $newServerUrl
-$registry[$CustomerName].bpc_environment = $newEnvironment
-$registry[$CustomerName].updated_at      = (Get-Date -Format "yyyy-MM-dd HH:mm:ss")
+# PSCustomObjects don't allow adding new properties via `.name = value` —
+# Add-Member -Force handles both updating existing properties and adding new ones.
+$registry[$CustomerName] | Add-Member -NotePropertyName "bpc_server_url"  -NotePropertyValue $newServerUrl   -Force
+$registry[$CustomerName] | Add-Member -NotePropertyName "bpc_environment" -NotePropertyValue $newEnvironment -Force
+$registry[$CustomerName] | Add-Member -NotePropertyName "updated_at"      -NotePropertyValue (Get-Date -Format "yyyy-MM-dd HH:mm:ss") -Force
 
 [System.IO.File]::WriteAllText(
     $registryPath,
