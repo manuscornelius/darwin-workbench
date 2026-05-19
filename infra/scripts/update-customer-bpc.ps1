@@ -70,17 +70,33 @@ Write-OK "Current values loaded"
 # ---------------------------------------------------------------------------
 Write-Step "Updating Secrets Manager"
 
-$newSecret = @{
+# Build the secret payload as a PowerShell object, serialize via -InputObject,
+# and pass to AWS CLI via file:// to avoid PS 5.1's native command arg quoting
+# bug — it strips embedded double quotes, which would corrupt the JSON property
+# names and leave the secret as an unparseable string.
+$newSecretObj = @{
     server_url  = $newServerUrl
     username    = $newUsername
     password    = $newPassword
     environment = $newEnvironment
-} | ConvertTo-Json -Compress
+}
 
-aws secretsmanager put-secret-value `
-    --secret-id $secretId `
-    --region $Region `
-    --secret-string $newSecret | Out-Null
+$secretJsonPath = Join-Path $env:TEMP "update-secret-$CustomerName-$([guid]::NewGuid().ToString('N')).json"
+[System.IO.File]::WriteAllText(
+    $secretJsonPath,
+    (ConvertTo-Json -InputObject $newSecretObj -Compress -Depth 5),
+    [System.Text.UTF8Encoding]::new($false)
+)
+$secretJsonFileUri = "file://" + ($secretJsonPath -replace '\\', '/')
+
+try {
+    aws secretsmanager put-secret-value `
+        --secret-id $secretId `
+        --region $Region `
+        --secret-string $secretJsonFileUri | Out-Null
+} finally {
+    if (Test-Path $secretJsonPath) { Remove-Item $secretJsonPath -Force }
+}
 
 Write-OK "Secrets Manager updated"
 
